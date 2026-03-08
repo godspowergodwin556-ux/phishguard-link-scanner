@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link Guard - Phishing Detection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            padding: 48px 32px;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .icon-shield {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 28px;
+        }
+
+        .input-section {
+            margin-bottom: 32px;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-group {
+            position: relative;
+            display: flex;
+            gap: 8px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .btn-analyze {
+            padding: 12px 28px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .btn-analyze:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-analyze:active {
+            transform: translateY(0);
+        }
+
+        .btn-analyze.loading {
+            opacity: 0.8;
+            pointer-events: none;
+        }
+
+        .result-section {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-section.show {
+            display: block;
+        }
+
+        .result-box {
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            border-left: 4px solid;
+        }
+
+        .result-box.safe {
+            background: #f0fdf4;
+            border-color: #22c55e;
+        }
+
+        .result-box.suspicious {
+            background: #fef3c7;
+            border-color: #f59e0b;
+        }
+
+        .result-box.dangerous {
+            background: #fef2f2;
+            border-color: #ef4444;
+        }
+
+        .result-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .result-icon {
+            font-size: 20px;
+        }
+
+        .result-box.safe .result-title {
+            color: #16a34a;
+        }
+
+        .result-box.suspicious .result-title {
+            color: #d97706;
+        }
+
+        .result-box.dangerous .result-title {
+            color: #dc2626;
+        }
+
+        .result-text {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+
+        .details-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .detail-item {
+            background: rgba(255, 255, 255, 0.5);
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #4b5563;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .detail-value {
+            color: #0f172a;
+            word-break: break-all;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 11px;
+        }
+
+        .risk-factors {
+            margin-top: 12px;
+        }
+
+        .risk-factors-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #4b5563;
+            margin-bottom: 8px;
+        }
+
+        .risk-factor {
+            display: flex;
+            gap: 6px;
+            font-size: 12px;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+
+        .risk-factor-icon {
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .example-links {
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 10px;
+            margin-top: 32px;
+        }
+
+        .example-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #475569;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .example-buttons {
+            display: grid;
+            gap: 6px;
+        }
+
+        .example-btn {
+            padding: 8px 12px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #3b82f6;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            font-family: 'Monaco', 'Courier New', monospace;
+            word-break: break-all;
+        }
+
+        .example-btn:hover {
+            background: #f0f4f8;
+            border-color: #3b82f6;
+        }
+
+        .url-display {
+            background: #f1f5f9;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 16px;
+            font-size: 12px;
+            word-break: break-all;
+            font-family: 'Monaco', 'Courier New', monospace;
+            color: #475569;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 32px 20px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            .btn-analyze {
+                width: 100%;
+            }
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="icon-shield">🛡️</div>
+            <h1>Link Guard</h1>
+            <p>Detect phishing and suspicious links before you click</p>
+        </div>
+
+        <div class="input-section">
+            <label class="input-label">Enter URL to Analyze</label>
+            <div class="input-group">
+                <input 
+                    type="text" 
+                    id="urlInput" 
+                    placeholder="https://example.com"
+                    autocomplete="off"
+                >
+                <button class="btn-analyze" id="analyzeBtn">Analyze</button>
+            </div>
+        </div>
+
+        <div class="result-section" id="resultSection">
+            <div class="result-box" id="resultBox">
+                <div class="result-title" id="resultTitle"></div>
+                <div class="result-text" id="resultText"></div>
+                <div class="url-display" id="urlDisplay"></div>
+                <div class="details-grid" id="detailsGrid"></div>
+            </div>
+        </div>
+
+        <div class="example-links">
+            <div class="example-title">Test Examples</div>
+            <div class="example-buttons">
+                <button class="example-btn" onclick="testUrl('https://www.google.com')">https://www.google.com</button>
+                <button class="example-btn" onclick="testUrl('https://secure-paypal-confirm.com')">https://secure-paypal-confirm.com</button>
+                <button class="example-btn" onclick="testUrl('https://www.microsoft.com/windows-update-verify')">https://www.microsoft.com/windows-update-verify</button>
+                <button class="example-btn" onclick="testUrl('https://amaz0n.com')">https://amaz0n.com</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const urlInput = document.getElementById('urlInput');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const resultSection = document.getElementById('resultSection');
+        const resultBox = document.getElementById('resultBox');
+        const resultTitle = document.getElementById('resultTitle');
+        const resultText = document.getElementById('resultText');
+        const urlDisplay = document.getElementById('urlDisplay');
+        const detailsGrid = document.getElementById('detailsGrid');
+
+        analyzeBtn.addEventListener('click', analyzeUrl);
+        urlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') analyzeUrl();
+        });
+
+        function testUrl(url) {
+            urlInput.value = url;
+            analyzeUrl();
+        }
+
+        async function analyzeUrl() {
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                alert('Please enter a URL');
+                return;
+            }
+
+            analyzeBtn.classList.add('loading');
+            analyzeBtn.innerHTML = '<span class="spinner"></span>';
+
+            // Simulate network delay for realistic UX
+            await new Promise(resolve => setTimeout(resolve, 600));
+
+            const analysis = detectPhishing(url);
+            displayResult(analysis);
+
+            analyzeBtn.classList.remove('loading');
+            analyzeBtn.textContent = 'Analyze';
+        }
+
+        function detectPhishing(urlString) {
+            let url;
+            try {
+                url = new URL(urlString.startsWith('http') ? urlString : 'https://' + urlString);
+            } catch {
+                return {
+                    status: 'dangerous',
+                    title: 'Invalid URL',
+                    message: 'The URL format is invalid. Please check and try again.',
+                    risks: [],
+                    url: urlString
+                };
+            }
+
+            const risks = [];
+            let threatLevel = 'safe';
+
+            const hostname = url.hostname.toLowerCase();
+            const protocol = url.protocol;
+            const pathname = url.pathname;
+            const search = url.search;
+
+            // Check 1: HTTP instead of HTTPS
+            if (protocol !== 'https:') {
+                risks.push('Uses HTTP instead of HTTPS (unencrypted)');
+                threatLevel = 'suspicious';
+            }
+
+            // Check 2: Suspicious TLDs
+            const suspiciousTLDs = ['.tk', '.ml', '.ga', '.cf', '.xyz', '.top', '.work', '.download', '.stream'];
+            if (suspiciousTLDs.some(tld => hostname.endsWith(tld))) {
+                risks.push('Uses a commonly abused domain extension');
+                threatLevel = threatLevel === 'dangerous' ? 'dangerous' : 'suspicious';
+            }
+
+            // Check 3: IP address instead of domain
+            if (/^\d+\.\d+\.\d+\.\d+/.test(hostname)) {
+                risks.push('Uses IP address instead of domain name');
+                threatLevel = 'dangerous';
+            }
+
+            // Check 4: Homograph attacks (character substitution)
+            const homographRisks = detectHomographAttacks(hostname);
+            if (homographRisks.length > 0) {
+                risks.push(...homographRisks);
+                threatLevel = 'dangerous';
+            }
+
+            // Check 5: Long and suspicious subdomains
+            const subdomainCount = hostname.split('.').length;
+            if (subdomainCount > 4) {
+                risks.push('Unusually deep subdomain structure');
+                threatLevel = threatLevel === 'dangerous' ? 'dangerous' : 'suspicious';
+            }
+
+            // Check 6: Suspicious keywords in domain
+            const suspiciousKeywords = [
+                'verify', 'confirm', 'update', 'secure', 'account', 'login', 'paypal', 'amazon', 'apple', 'google',
+                'confirm-identity', 'validate', 'click-here', 'urgent-action'
+            ];
+            if (suspiciousKeywords.some(keyword => hostname.includes(keyword))) {
+                risks.push('Domain contains suspicious keywords');
+                if (threatLevel !== 'dangerous') threatLevel = 'suspicious';
+            }
+
+            // Check 7: Suspicious URL path patterns
+            if (pathname.includes('admin') || pathname.includes('login') || pathname.includes('verify') || 
+                pathname.includes('confirm') || pathname.includes('update-password')) {
+                risks.push('URL path contains suspicious authentication keywords');
+                if (threatLevel !== 'dangerous') threatLevel = 'suspicious';
+            }
+
+            // Check 8: Multiple redirects or suspicious parameters
+            const suspiciousParams = ['redirect', 'url', 'return', 'target', 'callback', 'go-to'];
+            const params = new URLSearchParams(search);
+            const hasSuspiciousParams = Array.from(params.keys()).some(key => 
+                suspiciousParams.some(param => key.toLowerCase().includes(param)) &&
+                params.get(key)?.length > 20
+            );
+            if (hasSuspiciousParams) {
+                risks.push('Contains suspicious redirect parameters');
+                if (threatLevel !== 'dangerous') threatLevel = 'suspicious';
+            }
+
+            // Check 9: Known legitimate domains
+            const legitimateDomains = [
+                'google.com', 'microsoft.com', 'apple.com', 'amazon.com', 'facebook.com',
+                'github.com', 'stackoverflow.com', 'wikipedia.org', 'youtube.com', 'reddit.com'
+            ];
+            const baseDomain = getBaseDomain(hostname);
+            if (legitimateDomains.includes(baseDomain) && risks.length === 0) {
+                threatLevel = 'safe';
+            }
+
+            return {
+                status: threatLevel,
+                title: threatLevel === 'safe' ? '✓ Appears Safe' : threatLevel === 'suspicious' ? '⚠ Suspicious' : '✕ Dangerous',
+                message: getRecommendation(threatLevel),
+                risks: risks.length > 0 ? risks : [],
+                hostname,
+                protocol,
+                url: urlString,
+                threatLevel
+            };
+        }
+
+        function detectHomographAttacks(hostname) {
+            const risks = [];
+            
+            // Common homograph substitutions
+            const homographMap = {
+                '0': 'o',
+                '1': 'i|l',
+                '5': 's',
+                '8': 'b',
+            };
+
+            // Check for suspicious character combinations
+            if (/[0O][0O]{2,}/.test(hostname)) {
+                risks.push('Contains character lookalikes (homograph attack)');
+            }
+
+            // Check for domains that look like popular brands
+            const brandLookalikes = [
+                { pattern: /goo[0o]le/, brand: 'Google' },
+                { pattern: /amaz[0o]n/, brand: 'Amazon' },
+                { pattern: /[0o]ffice/, brand: 'Microsoft Office' },
+                { pattern: /[5s]ecure/, brand: 'Security' },
+                { pattern: /paypa[1l]/, brand: 'PayPal' },
+            ];
+
+            for (const { pattern, brand } of brandLookalikes) {
+                if (pattern.test(hostname)) {
+                    risks.push(`Mimics ${brand} with character substitution`);
+                }
+            }
+
+            return risks;
+        }
+
+        function getBaseDomain(hostname) {
+            const parts = hostname.split('.');
+            if (parts.length >= 2) {
+                return parts.slice(-2).join('.');
+            }
+            return hostname;
+        }
+
+        function getRecommendation(threatLevel) {
+            const recommendations = {
+                safe: 'This URL appears legitimate. However, always be cautious with personal or financial information.',
+                suspicious: 'This URL has some warning signs. Exercise caution and verify the source before clicking or entering sensitive information.',
+                dangerous: 'This URL shows strong indicators of phishing or malicious activity. We recommend avoiding this link.'
+            };
+            return recommendations[threatLevel] || recommendations.safe;
+        }
+
+        function displayResult(analysis) {
+            resultBox.className = `result-box ${analysis.status}`;
+            
+            const statusIcon = {
+                safe: '✓',
+                suspicious: '⚠',
+                dangerous: '✕'
+            }[analysis.status];
+
+            resultTitle.innerHTML = `<span class="result-icon">${statusIcon}</span>${analysis.title}`;
+            resultText.textContent = analysis.message;
+            urlDisplay.innerHTML = `<strong>URL:</strong> ${escapeHtml(analysis.url)}`;
+
+            detailsGrid.innerHTML = '';
+
+            // Add domain details
+            const domainDetail = document.createElement('div');
+            domainDetail.className = 'detail-item';
+            domainDetail.innerHTML = `
+                <span class="detail-label">Domain</span>
+                <span class="detail-value">${escapeHtml(analysis.hostname)}</span>
+            `;
+            detailsGrid.appendChild(domainDetail);
+
+            // Add protocol
+            const protocolDetail = document.createElement('div');
+            protocolDetail.className = 'detail-item';
+            protocolDetail.innerHTML = `
+                <span class="detail-label">Protocol</span>
+                <span class="detail-value">${escapeHtml(analysis.protocol)}</span>
+            `;
+            detailsGrid.appendChild(protocolDetail);
+
+            // Add risk factors if any
+            if (analysis.risks.length > 0) {
+                const risksDetail = document.createElement('div');
+                risksDetail.className = 'detail-item';
+                let risksHtml = '<span class="detail-label">Risk Factors</span><div class="risk-factors">';
+                analysis.risks.forEach(risk => {
+                    risksHtml += `
+                        <div class="risk-factor">
+                            <span class="risk-factor-icon">•</span>
+                            <span>${escapeHtml(risk)}</span>
+                        </div>
+                    `;
+                });
+                risksHtml += '</div>';
+                risksDetail.innerHTML = risksHtml;
+                detailsGrid.appendChild(risksDetail);
+            }
+
+            resultSection.classList.add('show');
+            resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Focus input on load
+        window.addEventListener('load', () => {
+            urlInput.focus();
+        });
+    </script>
+</body>
+</html>
